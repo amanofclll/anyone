@@ -3,10 +3,7 @@
 <head>
     <title>Open Sharing Platform</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .post { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
-        input, textarea { width: 100%; margin: 5px 0; }
-        img { max-width: 300px; height: auto; }
+        /* ... (keep the same styles as before) ... */
     </style>
     
     <!-- Firebase SDK -->
@@ -15,41 +12,11 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
 </head>
 <body>
-    <h1>Open Sharing Platform</h1>
-    
-    <!-- Upload Form -->
-    <div>
-        <h2>Share Content</h2>
-        <input type="text" id="title" placeholder="Title">
-        <textarea id="text" placeholder="Text content"></textarea>
-        <input type="url" id="link" placeholder="URL link">
-        <input type="file" id="image">
-        <button onclick="uploadContent()">Share</button>
-    </div>
-
-    <!-- Display Area -->
-    <div id="content">
-        <h2>Shared Content</h2>
-    </div>
+    <!-- ... (keep the same HTML structure as before) ... -->
 
     <script>
-        // Initialize Firebase with your config
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-        firebase.initializeApp(firebaseConfig);
+        // ... (keep the same Firebase config and initialization) ... 
 
-        // Create references to Firebase services
-        const database = firebase.database();
-        const storage = firebase.storage();
-
-        // Upload content to Firebase
         async function uploadContent() {
             const title = document.getElementById('title').value;
             const text = document.getElementById('text').value;
@@ -71,28 +38,36 @@
                 timestamp: Date.now()
             };
 
-            database.ref('posts').push(postData);
+            // Push new post and then check count
+            const newPostRef = database.ref('posts').push();
+            await newPostRef.set(postData);
+
+            // Automatically keep only last 10 posts
+            const postsSnapshot = await database.ref('posts')
+                .orderByChild('timestamp')
+                .once('value');
+
+            const posts = [];
+            postsSnapshot.forEach((childSnapshot) => {
+                posts.push({
+                    key: childSnapshot.key,
+                    ...childSnapshot.val()
+                });
+            });
+
+            // Delete older posts if more than 10
+            if (posts.length > 10) {
+                const postsToDelete = posts.slice(0, posts.length - 10);
+                const deletePromises = postsToDelete.map(post => 
+                    database.ref('posts/' + post.key).remove()
+                );
+                await Promise.all(deletePromises);
+            }
+            
             alert('Content shared!');
         }
 
-        // Display content from Firebase
-        database.ref('posts').on('value', (snapshot) => {
-            const contentDiv = document.getElementById('content');
-            contentDiv.innerHTML = '<h2>Shared Content</h2>';
-            
-            snapshot.forEach((childSnapshot) => {
-                const post = childSnapshot.val();
-                const postHtml = `
-                    <div class="post">
-                        ${post.title ? `<h3>${post.title}</h3>` : ''}
-                        ${post.text ? `<p>${post.text}</p>` : ''}
-                        ${post.link ? `<a href="${post.link}" target="_blank">${post.link}</a><br>` : ''}
-                        ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Uploaded image">` : ''}
-                    </div>
-                `;
-                contentDiv.innerHTML += postHtml;
-            });
-        });
+        // ... (keep the same display function as before) ...
     </script>
 </body>
 </html>
