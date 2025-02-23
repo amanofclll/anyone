@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Open Sharing Platform</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .post { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        input, textarea { width: 100%; margin: 5px 0; }
+        img { max-width: 300px; height: auto; }
+    </style>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+</head>
+<body>
+    <h1>Open Sharing Platform</h1>
+    
+    <!-- Upload Form -->
+    <div>
+        <h2>Share Content</h2>
+        <input type="text" id="title" placeholder="Title">
+        <textarea id="text" placeholder="Text content"></textarea>
+        <input type="url" id="link" placeholder="URL link">
+        <input type="file" id="image">
+        <button onclick="uploadContent()">Share</button>
+    </div>
+
+    <!-- Display Area -->
+    <div id="content">
+        <h2>Shared Content</h2>
+    </div>
+
+    <script>
+        // Initialize Firebase with your config
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Create references to Firebase services
+        const database = firebase.database();
+        const storage = firebase.storage();
+
+        // Upload content to Firebase
+        async function uploadContent() {
+            const title = document.getElementById('title').value;
+            const text = document.getElementById('text').value;
+            const link = document.getElementById('link').value;
+            const image = document.getElementById('image').files[0];
+            
+            let imageUrl = '';
+            if (image) {
+                const storageRef = storage.ref('images/' + image.name);
+                await storageRef.put(image);
+                imageUrl = await storageRef.getDownloadURL();
+            }
+
+            const postData = {
+                title: title,
+                text: text,
+                link: link,
+                imageUrl: imageUrl,
+                timestamp: Date.now()
+            };
+
+            database.ref('posts').push(postData);
+            alert('Content shared!');
+        }
+
+        // Display content from Firebase
+        database.ref('posts').on('value', (snapshot) => {
+            const contentDiv = document.getElementById('content');
+            contentDiv.innerHTML = '<h2>Shared Content</h2>';
+            
+            snapshot.forEach((childSnapshot) => {
+                const post = childSnapshot.val();
+                const postHtml = `
+                    <div class="post">
+                        ${post.title ? `<h3>${post.title}</h3>` : ''}
+                        ${post.text ? `<p>${post.text}</p>` : ''}
+                        ${post.link ? `<a href="${post.link}" target="_blank">${post.link}</a><br>` : ''}
+                        ${post.imageUrl ? `<img src="${post.imageUrl}" alt="Uploaded image">` : ''}
+                    </div>
+                `;
+                contentDiv.innerHTML += postHtml;
+            });
+        });
+    </script>
+</body>
+</html>
